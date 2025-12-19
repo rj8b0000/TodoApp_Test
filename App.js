@@ -5,52 +5,72 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function TodoList() {
   // State Hooks
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState([]); // always array
   const [text, setText] = useState('');
-  // Function to Add Task
 
+  // Load tasks from AsyncStorage
   useEffect(() => {
     const getTasksfromAsync = async () => {
-      const items = await AsyncStorage.getItem('Task');
-      setTasks(JSON.parse(items));
-      console.log('New Items: ', items);
+      try {
+        const items = await AsyncStorage.getItem('Task');
+        const parsedItems = items ? JSON.parse(items) : [];
+        setTasks(parsedItems);
+        console.log('New Items: ', parsedItems);
+      } catch (e) {
+        setTasks([]);
+      }
     };
     getTasksfromAsync();
   }, []);
 
+  // Add Task
   const addTask = async () => {
+    if (!text.trim()) return;
+
     const newTask = { id: Date.now(), text, completed: false };
-    setTasks([...tasks, newTask]);
-    await AsyncStorage.setItem('Task', JSON.stringify(tasks));
+    const updatedTasks = [...tasks, newTask];
+
+    setTasks(updatedTasks);
+    await AsyncStorage.setItem('Task', JSON.stringify(updatedTasks));
     setText('');
   };
-  // Function to Delete Task
+
+  // Delete Task
   const deleteTask = async id => {
-    setTasks(tasks.filter(task => task.id !== id));
-    await AsyncStorage.setItem('Task', JSON.stringify(tasks));
+    const updatedTasks = tasks.filter(task => task.id !== id);
+
+    setTasks(updatedTasks);
+    await AsyncStorage.setItem('Task', JSON.stringify(updatedTasks));
   };
-  // Function to Toggle Task Completion
-  function toggleCompleted(id) {
-    setTasks(
-      tasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task,
-      ),
+
+  // Toggle Task Completion
+  const toggleCompleted = async id => {
+    const updatedTasks = tasks.map(task =>
+      task.id === id ? { ...task, completed: !task.completed } : task,
     );
-  }
+
+    setTasks(updatedTasks);
+    await AsyncStorage.setItem('Task', JSON.stringify(updatedTasks));
+  };
+
   // Render TodoList Component
   return (
     <View>
-      {tasks.map(task => (
-        <TodoItem
-          key={task.id}
-          task={task}
-          deleteTask={deleteTask}
-          toggleCompleted={toggleCompleted}
-        />
-      ))}
+      {tasks.length > 0
+        ? tasks.map(task => (
+            <TodoItem
+              key={task.id}
+              task={task}
+              deleteTask={deleteTask}
+              toggleCompleted={toggleCompleted}
+            />
+          ))
+        : null}
+
       <TextInput value={text} onChangeText={setText} placeholder="New Task" />
       <Button title="Add" onPress={addTask} />
     </View>
   );
 }
+
 export default TodoList;
